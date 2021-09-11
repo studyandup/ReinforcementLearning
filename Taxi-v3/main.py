@@ -11,7 +11,7 @@ env.render()
 创建Q表的前提是知道多少状态和动作的维度
 open ai 提供了两个接口 env.action_space.n env.observation_space_n
 '''
-action_size = env.action_space.n  # 获取动作维度（一个状态下有几种动作选择）
+action_size = env.action_space.n  # 获取动作维度（一个状态下有几种动作选择） # env.action_space.n env.observation.n
 print("Action size ", action_size)
 state_size = env.observation_space.n  # 获取状态维度（一共多少种状态）
 print("State size ", state_size)
@@ -24,7 +24,7 @@ total_test_episodes = 100  # 测试中一共走几步
 max_steps = 99  # 每一局游戏最多走几步
 
 learning_rate = 0.7  # 学习率
-gamma = 0.618  # 未来奖励折扣率
+gamma = 0.9  # 未来奖励折扣率
 # 探索相关参数
 epsilon = 1.0  # 探索概率
 max_epsilon = 1.0  # 一开始的探索概率

@@ -9,6 +9,10 @@ import torch.nn.functional as F
 import numpy as np
 import gym
 
+'''
+ 
+'''
+
 # Hyper paramters
 BATH_SIZE = 32
 LR = 0.01  # learning rate
@@ -21,7 +25,7 @@ MEMORY_CAPACITY = 1000
 env = gym.make('CartPole-v0')
 # https://blog.csdn.net/weixin_42769131/article/details/114550177
 # 可以理解为解除step的次数限制。
-env = env.unwrapped
+# env = env.unwrapped
 N_ACTIONS = env.action_space.n
 N_STATES = env.observation_space.shape[0]
 ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(), int) else env.action_space.sample().shape
