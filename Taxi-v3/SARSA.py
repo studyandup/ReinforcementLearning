@@ -1,3 +1,8 @@
+#!/user/bin/env python3
+# -*- conding:utf-8 -*-
+# @auther Zhang
+# @date 2021/9/17
+# @file SARSA.py
 import random
 
 import numpy as np
@@ -40,30 +45,40 @@ for episode in range(total_episodes):
     state = env.reset()
     step = 0
     done = False  # 每一局最多走99步
+
+    # 生成0-1之间的随机数
+    exp_exp_tradeoff = random.uniform(0, 1)
+    # 如果这个数字大于探索概率（初始概率为1），则进行利用（选择最大的Q的动作）
+    if exp_exp_tradeoff > epsilon:
+        action = np.argmax(qtable[state, :])
+    # 否则，选择一个随机的动作进行探索
+    else:
+        action = env.action_space.sample()
+
     # ３。 choose an action in the current world State
     for step in range(max_steps):
-        # 生成0-1之间的随机数
-        exp_exp_tradeoff = random.uniform(0, 1)
-
-        # 如果这个数字大于探索概率（初始概率为1），则进行利用（选择最大的Q的动作）
-        if exp_exp_tradeoff > epsilon:
-            action = np.argmax(qtable[state, :])
-
-        # 否则，选择一个随机的动作进行探索
-        else:
-            action = env.action_space.sample()
 
         # 这个动作与环境进行交互后，获得奖励，环境变成新的状态
         new_state, reward, done, info = env.step(action)
+        # sarsa
+        exp_exp_tradeoff2 = random.uniform(0, 1)
+        if exp_exp_tradeoff2 > epsilon:
+             new_action = np.argmax(qtable[new_state, :])
+        # 否则，选择一个随机的动作进行探索
+        else:
+            new_action = env.action_space.sample()
 
         # 按照公式 Q(s,a):= Q(s,a) + lr [R(s,a) + gamma * max Q(s',a') - Q(s,a)]
+
         # 更新Q表
-        qtable[state, action] = qtable[state, action] + learning_rate * (reward + gamma * np.max(qtable[new_state, :]) - qtable[state, action])
+        qtable[state, action] = qtable[state, action] + learning_rate * \
+                                (reward + gamma * (qtable[new_state, new_action]) - qtable[state, action])
         # qtable[state, action] = qtable[state, action] + learning_rate * (
         #             reward + gamma * (qtable[new_state, action]) - qtable[state, action])
 
         # 迭代环境状态
         state = new_state
+        action = new_action
 
         # 如果游戏结束，则跳出循环
         if done:

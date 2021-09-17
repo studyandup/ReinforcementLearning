@@ -11,21 +11,23 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import numpy as np
 import gym
+import matplotlib.pyplot as plt
 
 # 1. 定义超参数
 BATCH_SIZE = 32  # batch size of sampling process from buffer
-LR = 0.01     # 学习率
+LR = 0.01  # 学习率
 EPSILON = 0.9  # epsilon used for epsilon greedy approach
 GAMMA = 0.9  # 衰减值
 TARGET_NETWORK_REPLACE_FREQ = 100  # How frequently target netowrk updates
 MEMORY_CAPACITY = 2000  # The capacity of experience replay buffer
 
 env = gym.make("CartPole-v0")  # Use cartpole game as environment
-env = env.unwrapped
+# env = env.unwrapped
 N_ACTIONS = env.action_space.n  # 2 actions
 N_STATES = env.observation_space.shape[0]  # 4 states
 # ？
-ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(),int) else env.action_space.sample().shape  # to confirm the shape
+ENV_A_SHAPE = 0 if isinstance(env.action_space.sample(),
+                              int) else env.action_space.sample().shape  # to confirm the shape
 
 
 # 2. Define the network used in both target net and the net for training
@@ -36,15 +38,21 @@ class Net(nn.Module):
         # Define the structure of fully connected network 全连接网络
         # https://blog.csdn.net/m0_37586991/article/details/87861418
         # 此处设置了两个全连接层，随机权重
-        self.fc1 = nn.Linear(N_STATES, 10)  # layer 1
+        self.fc1 = nn.Linear(N_STATES, 100)  # layer 1
         # 将tensor用均值为0和标准差为0.1的正态分布填充。
         self.fc1.weight.data.normal_(0, 0.1)  # in-place initilization of weights of fc1
-        self.out = nn.Linear(10, N_ACTIONS)  # layer 2
+
+        self.fc2 = nn.Linear(100,100)
+        self.fc2.weight.data.normal_(0,0.1)
+
+        self.out = nn.Linear(100, N_ACTIONS)  # layer 2
         self.out.weight.data.normal_(0, 0.1)  # in-place initilization of weights of fc2
 
     def forward(self, x):
         # Define how the input data pass inside the network
         x = self.fc1(x)
+        x = F.relu(x)
+        x = self.fc2(x)
         x = F.relu(x)
         actions_value = self.out(x)
         return actions_value
@@ -117,6 +125,7 @@ class DQN(object):
         if self.learn_step_counter % TARGET_NETWORK_REPLACE_FREQ == 0:
             # Assign the parameters of eval_net to target_net
             self.target_net.load_state_dict(self.eval_net.state_dict())
+
         self.learn_step_counter += 1
 
         # Determine the index of Sampled batch from buffer
@@ -139,6 +148,7 @@ class DQN(object):
         # calculate the Q value of state-action pair
         # gather() https://blog.csdn.net/edogawachia/article/details/80515038
         q_eval = self.eval_net(b_s).gather(1, b_a)  # (batch_size, 1)
+        # q_eval = self.target_net(b_s).gather(1,b_a)
         # print(q_eval)
         # calculate the q value of next state
         # detach() 返回一个tensor变量，且这个变量永远不会有梯度值。这个变量跟原图上的变量共享一块内存，也就说是同一个家伙。
@@ -160,7 +170,8 @@ class DQN(object):
 '''
 # create the object of DQN class
 dqn = DQN()
-
+episode = []
+epr = []
 # Start training
 print("\nCollecting experience...")
 for i_episode in range(400):
@@ -170,14 +181,22 @@ for i_episode in range(400):
     while True:
         env.render()
         # take action based on the current state
+        # actions_value = self.eval_net.forward(x)
         a = dqn.choose_action(s)
         # obtain the reward and next state and some other information
         s_, r, done, info = env.step(a)
 
-        # modify the reward based on the environment state
-        x, x_dot, theta, theta_dot = s_
-        r1 = (env.x_threshold - abs(x)) / env.x_threshold - 0.8
-        r2 = (env.theta_threshold_radians - abs(theta)) / env.theta_threshold_radians - 0.5
+        # modify the reward based on the environment state ??????????
+        # s
+        # Num  Observation                Min                      Max
+        # 0     Cart Position             -4.8                    4.8
+        # 1     Cart Velocity             -Inf                    Inf
+        # 2     Pole Angle                -0.418 rad(-24 deg      0.418 rad (24 deg)
+        # 3     Pole Angular Velocity     -Inf                    Inf
+        #
+        Cart_Position, Cart_Velocity, Pole_Angle, Pole_Angular_Velocity  = s_
+        r1 = (env.x_threshold - abs(Cart_Position)) / env.x_threshold - 0.8
+        r2 = (env.theta_threshold_radians - abs(Pole_Angle)) / env.theta_threshold_radians - 0.5
         r = r1 + r2
 
         # store the transitions of states
@@ -189,6 +208,8 @@ for i_episode in range(400):
         if dqn.memory_counter > MEMORY_CAPACITY:
             dqn.learn()
             if done:
+                epr.append(round(ep_r, 2))
+                episode.append(i_episode)
                 print('Ep: ', i_episode, ' |', 'Ep_r: ', round(ep_r, 2))
 
         if done:
@@ -196,3 +217,9 @@ for i_episode in range(400):
             break
         # use next state to update the current state.
         s = s_
+env.close()
+
+plt.plot(episode, epr)
+plt.xlabel("episode")
+plt.ylabel("ep_reward")
+plt.show()
