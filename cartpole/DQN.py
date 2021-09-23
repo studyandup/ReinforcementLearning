@@ -53,7 +53,7 @@ class DQN():
         self.memory_count = 0
         self.memory = np.zeros((MEMORY_CAPACITY, N_STATES * 2 + 2))
         self.optimizer = torch.optim.Adam(self.eval_net.parameters(), lr=LR)
-        self.loss_func = nn.MSELoss()
+        self.loss_func = nn.MSELoss() # 均方误差
 
     def choose_action(self, x):
         x = torch.unsqueeze(torch.FloatTensor(x), 0)
@@ -92,8 +92,8 @@ class DQN():
         q_eval = self.eval_net(b_s).gather(1, b_a)
         q_next = self.target_net(b_s_).detch()
         q_target = b_r + GAMMA * q_next.max(1)[0].view(BATH_SIZE, 1)
+        # nn.MSELoss，功能： 计算inputs与target之差的平方
         loss = self.loss_func(q_eval, q_target)
-
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
