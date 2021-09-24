@@ -35,5 +35,8 @@ import torch
 # x3 = torch.cat([x * 2 for i in range(1, 4)], 0)
 # print("x3 : \n", x3)
 # print(x3.size())
+x = torch.tensor([-0.2015, -0.1247])
+torch.unsqueeze(x,0)
+print(x)
 
 

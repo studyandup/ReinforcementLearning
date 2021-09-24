@@ -31,7 +31,7 @@ HIDDEN_SIZE = 32  # 中间层节点数目
 
 eps = np.finfo(np.float32).eps.item()  # 非负的最小值，使得归一化时分母不为0
 
-env = gym.make('CartPole-v1') # 创建环境
+env = gym.make('CartPole-v1')  # 创建环境
 
 env.seed(SEED)
 torch.manual_seed(SEED)  # 策略梯度算法方差很大，设置seed以保证复现性
@@ -48,7 +48,7 @@ class Agent(nn.Module):
         https://blog.csdn.net/junbaba_/article/details/105673998
         '''
         self.net = nn.Sequential(
-            nn.Linear(4, HIDDEN_SIZE),
+            nn.Linear(4, 32),
             nn.ReLU(),
             nn.Linear(32, 32),
             nn.ReLU(),
@@ -56,7 +56,7 @@ class Agent(nn.Module):
         # 动作概率网络
         self.action_net = nn.Sequential(
             nn.Linear(32, 2),
-            nn.Softmax(dim=1)
+            # nn.Softmax(dim=1),
         )
         # 价值网络
         self.value_net = nn.Sequential(
@@ -65,8 +65,12 @@ class Agent(nn.Module):
 
     def forward(self, state):
         x = self.net(state)
+
         value = self.value_net(x)
-        probs = self.action_net(x)
+
+        action_scores = self.action_net(x)
+        action_scores=torch.unsqueeze(action_scores, 0)
+        probs = F.softmax(action_scores, dim=1)
 
         return probs, value
 
@@ -74,53 +78,53 @@ class Agent(nn.Module):
 class Trainer:
     def __init__(self):
         self.net = Agent()
-        self.opt = optim.Adam(self.net.parameters(),lr=1e-2)
+        self.opt = optim.Adam(self.net.parameters(), lr=1e-2)
+
     def __call__(self):
         for epoch in range(1000):
             # 采样
             state = env.reset()
-            memory = [] # 存放的分函数和回报
+            memory = []  # 存放的分函数和回报
             while True:
                 if epoch > 300:
                     env.render()
-                action ,log_prob,value = self.__action_select(state)
-                state,reward,done,info = env.step(action)
-                memory.append([log_prob,action,value])
+                action, log_prob, value = self.__action_select(state)
+                state, reward, done, info = env.step(action)
+                memory.append([log_prob, action, value])
                 if done:
                     break
             # 总回报
             G = 0
-            GS =[] # 存放每一个状态的的总回报
+            GS = []  # 存放每一个状态的的总回报
             reward = 0
-            for _,reward,_ in memory[::-1]:
+            for _, reward, _ in memory[::-1]:
                 G = reward + GAMMA + G
-                GS.insert(0,G)
+                GS.insert(0, G)
                 reward += reward
             # 数据标准化
             GS = torch.tensor(GS)
-            GS = (GS-GS.mean())/(GS.std() + eps)
+            GS = (GS - GS.mean()) / (GS.std() + eps)
 
             # 计算损失
             actor_loss = 0
             critic_loss = 0
-            for G,(log_prob,_,value) in zip(GS,memory):
-                actor_loss += -(G-value) * log_prob
-                critic_loss += (value - G)**2
+            for G, (log_prob, _, value) in zip(GS, memory):
+                actor_loss += -(G - value) * log_prob
+                critic_loss += (value - G) ** 2
             loss = actor_loss + critic_loss
             self.opt.zero_grad()
             loss.backward()
             self.opt.step()
 
-
-
-    def __action_select(self,state):
+    def __action_select(self, state):
         state = torch.from_numpy(state).float()
-        probs,values = self.net(state)  # 传过来的数值是一个列表
+        probs, values = self.net(state)  # 传过来的数值是一个列表
         prob = probs[0]
         value = values[0]
-        m = Categorical(prob) # 探索机制，按照动作的概率进行采用
-        action = m.sample() # 根据采样选择动作
-        return action.item(),m.log_prob(action),value
+        m = Categorical(prob)  # 探索机制，按照动作的概率进行采用
+        action = m.sample()  # 根据采样选择动作
+        return action.item(), m.log_prob(action), value
+
 
 if __name__ == '__main__':
     train = Trainer()

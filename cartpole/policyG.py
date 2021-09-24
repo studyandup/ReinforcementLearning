@@ -52,6 +52,8 @@ class Policy(nn.Module):
         x = F.relu(x)
         action_scores = self.fc2(x)
         # https://zhuanlan.zhihu.com/p/105722023
+        print(action_scores.size())
+        print(F.softmax(action_scores, dim=1).size())
         return F.softmax(action_scores, dim=1)  # 核心 返回的是一组选取各个action的概率值
 
 
