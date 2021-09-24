@@ -46,8 +46,8 @@ class Policy(nn.Module):
         self.saved_log_probs = []  # ？？？？？？？？？？？？？
         self.rewards = []
 
-    def forward(self, x):
-        x = self.fc1(x)
+    def forward(self, state):
+        x = self.fc1(state)
         x = self.dropout(x)
         x = F.relu(x)
         action_scores = self.fc2(x)
@@ -124,9 +124,7 @@ def main():
     for i_episode in range(1000):  # 采集（训练）最多1000个序列
         state, ep_reward = env.reset(), 0  # ep_reward表示每个episode中的reward
         # print(state.shape)
-        #  这里为什么又写了个循环？
-        # 懂了，这里写while(true) 也是一样的效果，主要是跑完一条episode，记录下reward
-        for t in range(1, 1000):
+        while True:
             action = select_action(state)
             state, reward, done, _ = env.step(action)
             if RENDER:
