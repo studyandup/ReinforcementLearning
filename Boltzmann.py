@@ -58,7 +58,7 @@ def boltzmann(N, sigma):
 
 
 if __name__ == '__main__':
-    N = 1000
+    N=1000
     total_reward, expect_reward, operation_times = boltzmann(N, sigma)
     print("Boltzmann策略的累积奖励：", total_reward)
     # 期望奖励估计表
